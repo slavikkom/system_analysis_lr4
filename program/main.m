@@ -124,7 +124,6 @@ global N X1 X2 X3 Y t q1 q2 q3 qY qN p1 p2 p3
 global stop
 stop = 0;
 set(handles.pushbutton7,'Enable','on');
-set(handles.pushbutton8,'BackgroundColor','green');
 
 Y_N = ones(N,3);
 Y_N(:,1)=Y_N(:,1)*11.7;
@@ -184,31 +183,68 @@ for i = T_min:T_max
     if (stop == 1)
         break;
     end
-    subplot(3,10,3.75:4.75); % 1:2
-        plot(T(T_min:i),Y(T_min:i,1),T(T_min:i),Y_N(T_min:i,1),T(T_min:i),Y_C(T_min:i,1),T(T_min:i),Y_A(T_min:i,1))
-        title('Напруга мережі')
-    subplot(3,10,6.75:7.75); % 4:5
-        plot(T(T_min:i),Y(T_min:i,2),T(T_min:i),Y_N(T_min:i,2),T(T_min:i),Y_C(T_min:i,2),T(T_min:i),Y_A(T_min:i,2))
-        title('Рівень палива')
-    subplot(3,10,9.5:10.5); % 7:8
-        plot(T(T_min:i),Y(T_min:i,3),T(T_min:i),Y_N(T_min:i,3),T(T_min:i),Y_C(T_min:i,3),T(T_min:i),Y_A(T_min:i,3))
-        title('Напруга аккумуляторної батареї')
-    subplot(3,10,13.75:14.75);
-        plot(T(T_min:i),R(T_min:i,1))
-        title('Ризик напруги мережі')
-    subplot(3,10,16.75:17.75);
-        plot(T(T_min:i),R(T_min:i,2))
-        title('Ризик рівню палива')
-    subplot(3,10,19.5:20.5);
-        plot(T(T_min:i),R(T_min:i,3))
-        title('Ризик напруги АБ')
+    if ((i > 50) && (get(handles.checkbox2, 'Value') == 1))
+        subplot(3,10,23.5:24.5); % 1:2
+            plot(T(T_min:i+10),[Y(T_min:i,1);  Forecast( Y( i - 50 : i, 1))],...
+                T(T_min:i+10),Y_N(T_min:i+10,1),T(T_min:i+10),Y_C(T_min:i+10,1),T(T_min:i+10),Y_A(T_min:i+10,1))
+            hold on
+            plot(T(i),Y(i,1),'*')
+            title('Network voltage')
+        subplot(3,10,26.25:27.25); % 4:5
+            plot(T(T_min:i+10),[Y(T_min:i,2);  Forecast( Y( i - 50 : i, 2))],...
+                T(T_min:i+10),Y_N(T_min:i+10,2),T(T_min:i+10),Y_C(T_min:i+10,2),T(T_min:i+10),Y_A(T_min:i+10,2))
+            hold on
+            plot(T(i),Y(i,2),'*')
+            title('Fuel level')
+        subplot(3,10,29:30); % 7:8
+            plot(T(T_min:i+10),[Y(T_min:i,3);  Forecast( Y( i - 50 : i, 3))],...
+                T(T_min:i+10),Y_N(T_min:i+10,3),T(T_min:i+10),Y_C(T_min:i+10,3),T(T_min:i+10),Y_A(T_min:i+10,3))
+            hold on
+            plot(T(i),Y(i,3),'*')
+            title('Battery voltage')
+        subplot(3,10,13.5:14.5);
+            plot(T(T_min:i+10),R(T_min:i+10,1))
+            hold on
+            plot(T(i),R(i,1),'*')
+            title('Network voltage Risk')
+        subplot(3,10,16.25:17.25);
+            plot(T(T_min:i+10),R(T_min:i+10,2))
+            hold on
+            plot(T(i),R(i,2),'*')
+            title('Fuel level Risk')
+        subplot(3,10,19:20);
+            plot(T(T_min:i+10),R(T_min:i+10,3))
+            hold on
+            plot(T(i),R(i,3),'*')
+            title('Battery voltage Risk') 
+    else
+        subplot(3,10,23.5:24.5); % 1:2
+            plot(T(T_min:i),Y(T_min:i,1),T(T_min:i),Y_N(T_min:i,1),T(T_min:i),Y_C(T_min:i,1),T(T_min:i),Y_A(T_min:i,1))
+            title('Network voltage')
+        subplot(3,10,26.25:27.25); % 4:5
+            plot(T(T_min:i),Y(T_min:i,2),T(T_min:i),Y_N(T_min:i,2),T(T_min:i),Y_C(T_min:i,2),T(T_min:i),Y_A(T_min:i,2))
+            title('Fuel level')
+        subplot(3,10,29:30); % 7:8
+            plot(T(T_min:i),Y(T_min:i,3),T(T_min:i),Y_N(T_min:i,3),T(T_min:i),Y_C(T_min:i,3),T(T_min:i),Y_A(T_min:i,3))
+            title('Battery voltage')
+        subplot(3,10,13.5:14.5);
+            plot(T(T_min:i),R(T_min:i,1))
+            title('Network voltage Risk')
+        subplot(3,10,16.25:17.25);
+            plot(T(T_min:i),R(T_min:i,2))
+            title('Fuel level Risk')
+        subplot(3,10,19:20);
+            plot(T(T_min:i),R(T_min:i,3))
+            title('Battery voltage Risk')    
+    end
+    
     set(handles.text2, 'String', int2str(i));
     if R_L(i)==0 
-        F_State = 'Система функціонує нормально';
-        %set(handles.pushbutton8,'BackgroundColor','green');
+        F_State = 'Normally state';
+        set(handles.uitable3,'BackgroundColor',[1, 0.81, 0.86]);
     else 
-        F_State = 'Нештатна ситуація';
-        %set(handles.pushbutton8,'BackgroundColor','red');
+        F_State = 'Emergency situation';
+        set(handles.uitable3,'BackgroundColor',[1, 0.21, 0.43]);
     end
     Probab = strcat(num2str(round(r(i)*100)),'%');
     Level = R_L(i);
@@ -216,22 +252,30 @@ for i = T_min:T_max
     Problem = ' ';
 
     if R(i,1)>0
-        Problem = strcat(Problem, 'Низька напруга мережі; ');
+        Problem = strcat(Problem, 'Low network voltage; ');
     end
     if R(i,2)>0
-        Problem = strcat(Problem, 'Низький рівень палива; ');
+        Problem = strcat(Problem, 'Low fuel level; ');
     end
     if R(i,3)>0
-        Problem = strcat(Problem, 'Низька напруга АБ; ');
+        Problem = strcat(Problem, 'Low battety voltage; ');
     end
     
         
     
     dat(i,:)={T(i), Y(i,1), Y(i,2), Y(i,3), F_State,Probab, Problem, Level};
     set(handles.uitable3 ,'Data', flipud(dat)); 
-    subplot(3, 10, 11.5:12.5); % 4:5
-        plot(T(T_min:i), R_L(T_min:i));
-        title('Рівень небезпеки')
+    if ((i > 50) && (get(handles.checkbox2, 'Value') == 1))
+        subplot(3, 10, 11:12); % 4:5
+            plot(T(T_min:i+10), R_L(T_min:i+10));
+            hold on
+            plot(T(i), R_L(i), '*')
+            title('Risk level')
+    else
+        subplot(3, 10, 11:12); % 4:5
+            plot(T(T_min:i), R_L(T_min:i));
+            title('Risk level')
+    end
     q1 = 4;
     q2 = 2;
     q3 = 3;
@@ -240,6 +284,10 @@ for i = T_min:T_max
     p1 = 4;
     p2 = 4;
     p3 = 4;
+    
+    %Future = Forecast( Y( i - 50 : i, 1));
+
+    
     if ((i > 50) && (get(handles.checkbox1, 'Value') == 1))
         %dlmwrite('result.txt', 33);
         X1_50 = X1( i - 50 : i,:);
@@ -256,8 +304,8 @@ end
 %set(handles.uitable3 ,'Data',dat); 
 %
 %
-tt=timer('ExecutionMode', 'fixedDelay', 'Period', 0.5, 'TasksToExecute', 2, 'TimerFcn', 'dummy=1;');
-j=0;
+%tt=timer('ExecutionMode', 'fixedDelay', 'Period', 0.5, 'TasksToExecute', 2, 'TimerFcn', 'dummy=1;');
+%j=0;
 %{
 while j < T_max-50
     j=j+1;
