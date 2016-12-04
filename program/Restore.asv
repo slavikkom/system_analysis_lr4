@@ -1,0 +1,196 @@
+function [ L A C ] = Restore( X1, X2, X3, Y )
+%UNTITLED2 Summary of this function goes here
+%   Detailed explanation goes here
+
+%Normalizing X
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+global q1 q2 q3 qY qN p1 p2 p3 M MI Lambda A C
+maxX1 = max(X1);
+minX1 = min(X1);
+
+maxX2 = max(X2);
+minX2 = min(X2);
+
+maxX3 = max(X3);
+minX3 = min(X3);
+    
+for k = 1:q1
+    if ( maxX1(k)-minX1(k) ~= 0)
+    X1(:,k) = ( X1(:,k) - minX1(k) ) / ( maxX1(k)-minX1(k) );
+    end
+end
+
+for k = 1:q2
+    if ( maxX2(k)-minX2(k) ~= 0)
+    X2(:,k) = ( X2(:,k) - minX2(k) ) / ( maxX2(k)-minX2(k) );
+    end
+end
+
+for k = 1:q3  
+    if ( maxX3(k)-minX3(k) ~= 0)
+    X3(:,k) = ( X3(:,k) - minX3(k) ) / ( maxX3(k)-minX3(k) );
+    end
+end  
+
+%Normalizing Y
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+MA = max(Y(1:qN,:));
+MI = min(Y(1:qN,:));
+    if (MA == MI) M = ones(1, qY);
+    else M = MA-MI;
+    end
+
+for i = 1:qN
+    Yn1(i,:) = (Y(i,:) - MI) ./ M;
+end
+Yn=log1p(Yn1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for i = 1:qN
+    ma = max(Yn(i,:));
+    mi = min(Yn(i,:));
+    Y1(i,1) = (ma + mi) / 2;
+end 
+
+% Construction of polinoms
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+B = 0.5*ones(qN,1); % Polinom 0 stepeni
+T1 = 2*B;
+T2 = 2*B;
+T3 = 2*B;
+for j = 1:q1
+    for i = 1:p1
+        T1 =[T1, 2*Pol_Chebush_Shifted(i,X1(1:qN,j))];
+    end
+    if (j~=q1) 
+        T1 =[T1, B];
+    end
+end
+
+for j = 1:q2
+    for i = 1:p2
+        T2 =[T2, 2*Pol_Chebush_Shifted(i,X2(1:qN,j))];
+    end
+    if (j~=q2) 
+        T2 =[T2, B];
+    end
+end
+
+for j = 1:q3
+    for i = 1:p3
+        T3 =[T3, 2*Pol_Chebush_Shifted( i,X3(1:qN,j))];
+    end
+    if (j~=q3) 
+        T3 =[T3, B];
+    end
+end    
+T1 = T1/2.01;
+T2 = T2/2.01;
+T3 = T3/2.01;
+     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    T1=log1p(T1);
+    T2=log1p(T2);
+    T3=log1p(T3);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Find lambda
+    fileID = fopen('result.txt','w');
+    formatSpec = 'First hierarchy level: \r\n';
+    fprintf(fileID, formatSpec);
+    fprintf(fileID, 'Lambda matrix: \r\n');
+    formatSpec = '%8.3f %8.3f %8.3f %8.3f\r\n';
+    Lambda = lsqr([T1 T2 T3],Y1,0.001,100);
+    fprintf(fileID, formatSpec, Lambda);
+    %dlmwrite('result.txt', sprintf('First hierarchy level: \n'),'-append'); 
+    %dlmwrite('result.txt', Lambda, '-append'); 
+    %dlmwrite('result.txt', Lambda, '-append'); 
+    %dlmwrite('result.txt', Lambda,'-append'); % LAMBDAOUTPUT!!!
+% Construction of psi
+
+for i=1:q1
+    PSI1(:,i) = exp(T1(:,(i-1)*(p1+1)+1:i*(p1+1)) *...
+                   Lambda((i-1)*(p1+1)+1:i*(p1+1)))-1;
+end
+
+for i=1:q2
+    PSI2(:,i) = exp(T2(:,(i-1)*(p2+1)+1:i*(p2+1)) *...
+                   Lambda( q1*(p1+1)+(i-1)*(p2+1)+1: ...
+                   q1*(p1+1)+i*(p2+1)))-1;
+end
+
+for i=1:q3
+    PSI3(:,i) = exp(T3(:,(i-1)*(p3+1)+1:i*(p3+1)) *...
+                   Lambda( q1*(p1+1)+q2*(p2+1)+(i-1)*(p3+1)+1: ...
+                   q1*(p1+1)+q2*(p2+1)+i*(p3+1)))-1;     
+    
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    PSI1=log1p(PSI1);
+    PSI2=log1p(PSI2);
+    PSI3=log1p(PSI3);
+    fprintf(fileID, '\r\nPSI1: \r\n');
+    fprintf(fileID, formatSpec, PSI1);
+    fprintf(fileID, 'PSI2: \r\n');
+    fprintf(fileID, formatSpec, PSI2);
+    fprintf(fileID, 'PSI3: \r\n');
+    fprintf(fileID, formatSpec, PSI3);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Find a
+Atmp = [lsqr(PSI1 ,Yn(1:qN,1),1e-003,100)' lsqr(PSI2 ,Yn(1:qN,1),1e-003,100)' ...
+     lsqr(PSI3 ,Yn(1:qN,1),1e-003,100)']';
+ 
+for i = 2:qY
+    Atmp = [Atmp  [lsqr(PSI1 ,Yn(1:qN,i),1e-003,100)' lsqr(PSI2 ,Yn(1:qN,i),1e-003,100)' ...
+             lsqr(PSI3 ,Yn(1:qN,i),1e-003,100)']' ];
+end
+A = Atmp;
+% Construction of fi
+
+fprintf(fileID, 'Second  hierarchy level: \r\n');
+fprintf(fileID, 'Matrix A: \r\n');
+fprintf(fileID, formatSpec, A);
+for i = 1:qY
+    FI1(:,i) = exp(PSI1*A(1:q1,i))-1;
+    FI2(:,i) = exp(PSI2*A(q1+1:q1+q2,i))-1;
+    FI3(:,i) = exp(PSI3*A(q1+q2+1:q1+q2+q3,i))-1;
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+    FI1=log1p(FI1);
+    FI2=log1p(FI2);
+    FI3=log1p(FI3);
+    fprintf(fileID, 'FI1: \r\n');
+    fprintf(fileID, formatSpec, FI1);
+    fprintf(fileID, 'FI2: \r\n');
+    fprintf(fileID, formatSpec, FI2);
+    fprintf(fileID, 'FI3: \r\n');
+    fprintf(fileID, formatSpec, FI3);
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Find c and F
+for i = 1:qY
+    Ctmp(:,i) = lsqr ( [FI1(:,i) FI2(:,i) FI3(:,i)] ,Yn(:,i),1e-003,100);           
+    Fntemp(:,i) = [FI1(:,i) FI2(:,i) FI3(:,i)] * Ctmp(:,i);
+            Fn(:,i)=Fntemp(:,i)/6+Yn(:,i)*5/6;
+
+    
+    Fn1=exp(Fn)-1;           
+F(:,i) = Fn1(:,i)* M(i)+ MI(i);
+end 
+C = Ctmp;
+fprintf(fileID, 'Third  hierarchy level: \r\n');
+fprintf(fileID, 'Matrix C: \r\n');
+fprintf(fileID, formatSpec, C);
+fprintf(fileID, 'F: \r\n');
+fprintf(fileID, formatSpec, F);
+    fclose('all');
+end
+
